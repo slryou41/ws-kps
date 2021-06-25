@@ -6,5 +6,5 @@ PyTorch implementation of Weakly Supervised Keypoint Discovery, Serim Ryou and P
 3. Train the model with the script:
 
 ```python
-python train.py [data_path] --checkpoint [path_to_checkpoint] --gpu [gpu_id] --lr 0.001 --batch-size [batch_size] --nkpts [number of keypoints] --nclass [number of class category] 
+python train.py [path_to_dataset] --checkpoint [path_to_checkpoint] --gpu [gpu_id] --lr 0.001 --batch-size [batch_size] --nkpts [number_of_keypoints] --nclass [number_of_class_category] --dataset [dataset_name]
 ```

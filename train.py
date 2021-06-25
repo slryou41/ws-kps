@@ -86,8 +86,8 @@ parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metava
                     help='path to save checkpoint (default: checkpoint)')
 
 # Dataset parameters
-parser.add_argument('--nclass', default=12, type=int, metavar='N') 
-parser.add_argument('--nkpts', default=20, type=int, metavar='N')
+parser.add_argument('--nclass', default=200, type=int, metavar='N') 
+parser.add_argument('--nkpts', default=10, type=int, metavar='N')
 parser.add_argument('--dataset', default='cub', type=str, 
                     help='dataset name')
 
@@ -295,11 +295,8 @@ def _exp_running_avg(x, rho=0.99, init_val=0.0):
 
 
 def train(train_loader, model, loss_model, criterion, optimizer, epoch, args):
-# def train(train_loader, model, loss_model, criterion, optimizer, epoch, pseudo_model, args):
     
-    vis_env = 'AnimalPose'
     debug = True
-    kpt_train = False
     loss_weight = [100.0, 1.6, 2.3, 1.8, 2.8, 100.0]
     
     batch_time = AverageMeter('Time', ':6.3f')
@@ -346,7 +343,7 @@ def train(train_loader, model, loss_model, criterion, optimizer, epoch, args):
 
             _mask = F.upsample(loss_mask, 
                                size=(output[1].size(2), output[1].size(3)), mode='bilinear')
-            l = criterion[4](tr_inputs, output[1], _mask)
+            l = criterion[2](tr_inputs, output[1], _mask)
             wl = _exp_running_avg(l.mean(), init_val=loss_weight[0])
             l /= wl
 
@@ -355,20 +352,20 @@ def train(train_loader, model, loss_model, criterion, optimizer, epoch, args):
             for _i in range(0, len(vgg_feat_in)):
                 _mask = F.upsample(loss_mask, 
                                    size=(vgg_feat_in[_i].size(2), vgg_feat_in[_i].size(3)), mode='bilinear') # in_mask
-                l = criterion[4](vgg_feat_in[_i], vgg_feat_out[_i], _mask)
+                l = criterion[2](vgg_feat_in[_i], vgg_feat_out[_i], _mask)
                 wl = _exp_running_avg(l.mean(), init_val=loss_weight[_i+1])
                 l /= wl
 
                 loss += l.mean()
         else:
-            loss = criterion[3](output[1] * loss_mask, tr_inputs * loss_mask)
+            loss = criterion[1](output[1] * loss_mask, tr_inputs * loss_mask)
             loss = loss.mean()
 
         cls_loss = criterion[0](output[0], target)
 
         _loss = loss # to keep track of each loss
 
-        loss = cls_loss + loss # + match_loss
+        loss = cls_loss + loss
         preds = output[0]
 
         if epoch > 30:
@@ -388,7 +385,7 @@ def train(train_loader, model, loss_model, criterion, optimizer, epoch, args):
             flipped_label = -output[8][0]
             flipped_label = torch.cat((flipped_label, output[8][1]), dim=1)
             pseudo_pred = torch.cat((pseudo_output[1][0], pseudo_output[1][1]), dim=1)
-            ps_loss = criterion[3](flipped_label[sample_idx], pseudo_pred[sample_idx])
+            ps_loss = criterion[1](flipped_label[sample_idx], pseudo_pred[sample_idx])
             
             loss = loss + ps_loss
                 
@@ -415,7 +412,7 @@ def train(train_loader, model, loss_model, criterion, optimizer, epoch, args):
 
 
 def validate(val_loader, model, criterion, epoch, args):
-    vis_env = 'AnimalPose'
+    
     debug = True
     
     batch_time = AverageMeter('Time', ':6.3f')
@@ -453,7 +450,7 @@ def validate(val_loader, model, criterion, epoch, args):
             output = model(inputs, tr_inputs)
             
             cls_loss = criterion[0](output[0], target)
-            mse_loss = criterion[3](output[1], tr_inputs)
+            mse_loss = criterion[1](output[1], tr_inputs)
             
             loss = mse_loss + cls_loss 
 
